@@ -27,8 +27,11 @@ chickenActivity = False
 chickenTotal = 3
 chickenInside = 3
 doorLocation = "Melbourne, Victoria, Australia"
+doorLocationLat = 0.0
+doorLocationLong = 0.0
 sunriseTime = datetime.now().time()
 sunsetTime = datetime.now().time()
+sunLoopCounter = 0
 
 # ------ Define Functions ------
 
@@ -218,11 +221,13 @@ def mqttCmdCallback(client, userdata, msg):
         print("The number of chickens inside is: " + str(chickenInside))
     # Setting location callback option
     elif (msg.topic == "SmartChickenCoop/cmd/location"):
-        global doorLocation
+        global doorLocation, doorLocationLat, doorLocationLong
         # Use nominatim and geocode to lookup location input
         geolocator = Nominatim(user_agent="SmartChickenCoopDoor")
         location = geolocator.geocode(msg.payload.decode("utf-8"))
         doorLocation = location.address
+        doorLocationLat = location.latitude
+        doorLocationLong = location.longitude
         # Pass Lat and Long to sun time function to update those global vars
         getSunTimes(location.latitude, location.longitude)
     
@@ -276,9 +281,13 @@ while True:
             if (GPIO.input(STEPPER[3])):
                 toggleDoor()
         sleep(10)
+        sunLoopCounter += 1
+        # Every 24 hours roughtly, new sunset and sunrise times are retrieved 
+        if (sunLoopCounter >= 8640):
+            sunLoopCounter = 0
+            getSunTimes(doorLocationLat, doorLocationLong)
     except:
         break
-
 
 # End script
 
